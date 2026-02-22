@@ -371,6 +371,16 @@ export default function App() {
                     </ol>
                   </div>
 
+                  <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl">
+                    <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-2">Install as App (No APK needed):</h4>
+                    <ol className="text-[10px] text-zinc-400 space-y-2 list-decimal ml-4">
+                      <li>Open this URL in <b>Chrome</b> (Android) or <b>Safari</b> (iOS).</li>
+                      <li>Tap the <b>Menu</b> or <b>Share</b> button.</li>
+                      <li>Select <b>"Add to Home Screen"</b> or <b>"Install App"</b>.</li>
+                      <li>The app will now appear on your home screen!</li>
+                    </ol>
+                  </div>
+
                   <button 
                     onClick={() => setShowSettings(false)}
                     className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-blue-600/20"
