@@ -1,0 +1,5 @@
+{
+  "name": "RemoteLink",
+  "description": "A professional-grade real-time PC remote control interface with virtual touchpad, media controls, and game mode.",
+  "requestFramePermissions": []
+}
