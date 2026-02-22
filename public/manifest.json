@@ -1,0 +1,22 @@
+{
+  "short_name": "RemoteLink",
+  "name": "RemoteLink PC Controller",
+  "icons": [
+    {
+      "src": "https://picsum.photos/id/0/192/192",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://picsum.photos/id/0/512/512",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0a0a0b",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#3b82f6",
+  "description": "Professional-grade real-time PC remote control interface."
+}

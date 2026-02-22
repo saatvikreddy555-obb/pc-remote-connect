@@ -33,14 +33,16 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 
 type Mode = 'PC' | 'REMOTE' | 'SELECT';
+type RemoteView = 'TOUCHPAD' | 'KEYBOARD' | 'GAMEPAD' | 'POWER';
 
 interface Message {
-  type: 'MOUSE_MOVE' | 'MOUSE_CLICK' | 'KEY_PRESS' | 'MEDIA_CMD' | 'POWER_CMD' | 'CURSOR_POS' | 'SYSTEM_STATS';
+  type: 'MOUSE_MOVE' | 'MOUSE_CLICK' | 'KEY_PRESS' | 'MEDIA_CMD' | 'POWER_CMD' | 'CURSOR_POS' | 'SYSTEM_STATS' | 'GAMEPAD_INPUT';
   payload: any;
 }
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('SELECT');
+  const [remoteView, setRemoteView] = useState<RemoteView>('TOUCHPAD');
   const [connected, setConnected] = useState(false);
   const [cursorPos, setCursorPos] = useState({ x: 50, y: 50 });
   const [systemStats, setSystemStats] = useState({ cpu: 0, ram: 0, battery: 100, isCharging: false });
@@ -56,10 +58,8 @@ export default function App() {
 
     let url = '';
     if (customIp) {
-      // Manual IP connection (Local Network)
       url = `ws://${customIp}`;
     } else {
-      // Automatic Cloud connection
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       url = `${protocol}//${window.location.host}`;
     }
@@ -83,7 +83,7 @@ export default function App() {
       setCursorPos(msg.payload);
     } else if (msg.type === 'SYSTEM_STATS') {
       setSystemStats(msg.payload);
-    } else if (msg.type === 'MEDIA_CMD' || msg.type === 'KEY_PRESS' || msg.type === 'POWER_CMD') {
+    } else if (msg.type === 'MEDIA_CMD' || msg.type === 'KEY_PRESS' || msg.type === 'POWER_CMD' || msg.type === 'GAMEPAD_INPUT') {
       setLastAction(`${msg.type}: ${JSON.stringify(msg.payload)}`);
       setTimeout(() => setLastAction(null), 2000);
     }
@@ -115,6 +115,159 @@ export default function App() {
     const clampedY = Math.max(0, Math.min(100, y));
 
     sendMessage({ type: 'CURSOR_POS', payload: { x: clampedX, y: clampedY } });
+  };
+
+  const renderRemoteView = () => {
+    switch (remoteView) {
+      case 'TOUCHPAD':
+        return (
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="flex items-center justify-between px-2">
+              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Precision Touchpad</span>
+              <Maximize className="w-3 h-3 text-zinc-500" />
+            </div>
+            <div 
+              ref={touchpadRef}
+              onMouseMove={handleTouchpadMove}
+              onTouchMove={handleTouchpadMove}
+              className="flex-1 hardware-surface rounded-3xl relative overflow-hidden cursor-none active:border-blue-500/50 transition-colors"
+              style={{ 
+                backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0)',
+                backgroundSize: '24px 24px'
+              }}
+            >
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
+                <MousePointer2 className="w-12 h-12" />
+              </div>
+            </div>
+          </div>
+        );
+      case 'KEYBOARD':
+        const keys = [
+          ['Esc', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'],
+          ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'Backspace'],
+          ['Tab', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', '\\'],
+          ['Caps', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', "'", 'Enter'],
+          ['Shift', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', 'Shift'],
+          ['Ctrl', 'Win', 'Alt', 'Space', 'Alt', 'Fn', 'Ctrl']
+        ];
+        return (
+          <div className="flex-1 flex flex-col gap-2 overflow-y-auto pb-4">
+            <div className="flex items-center justify-between px-2">
+              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Virtual Keyboard</span>
+              <Keyboard className="w-3 h-3 text-zinc-500" />
+            </div>
+            <div className="flex flex-col gap-2">
+              {keys.map((row, i) => (
+                <div key={i} className="flex gap-1 justify-center">
+                  {row.map((key) => (
+                    <button
+                      key={key}
+                      onClick={() => sendMessage({ type: 'KEY_PRESS', payload: key })}
+                      className={`hardware-surface rounded-lg text-[10px] font-mono py-3 px-2 min-w-[30px] active:bg-blue-600 transition-colors ${key === 'Space' ? 'flex-1' : ''}`}
+                    >
+                      {key}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      case 'GAMEPAD':
+        return (
+          <div className="flex-1 flex flex-col gap-8 items-center justify-center">
+            <div className="grid grid-cols-3 gap-4">
+              <div />
+              <button 
+                onClick={() => sendMessage({ type: 'GAMEPAD_INPUT', payload: 'UP' })}
+                className="hardware-surface w-16 h-16 rounded-xl flex items-center justify-center active:bg-emerald-600"
+              >
+                <ChevronUp className="w-8 h-8" />
+              </button>
+              <div />
+              <button 
+                onClick={() => sendMessage({ type: 'GAMEPAD_INPUT', payload: 'LEFT' })}
+                className="hardware-surface w-16 h-16 rounded-xl flex items-center justify-center active:bg-emerald-600"
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+              <div className="w-16 h-16 flex items-center justify-center">
+                <div className="w-4 h-4 bg-emerald-500 rounded-full animate-pulse" />
+              </div>
+              <button 
+                onClick={() => sendMessage({ type: 'GAMEPAD_INPUT', payload: 'RIGHT' })}
+                className="hardware-surface w-16 h-16 rounded-xl flex items-center justify-center active:bg-emerald-600"
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+              <div />
+              <button 
+                onClick={() => sendMessage({ type: 'GAMEPAD_INPUT', payload: 'DOWN' })}
+                className="hardware-surface w-16 h-16 rounded-xl flex items-center justify-center active:bg-emerald-600"
+              >
+                <ChevronDown className="w-8 h-8" />
+              </button>
+              <div />
+            </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => sendMessage({ type: 'GAMEPAD_INPUT', payload: 'X' })}
+                  className="hardware-surface w-14 h-14 rounded-full flex items-center justify-center text-blue-400 font-bold active:bg-blue-600 active:text-white"
+                >
+                  X
+                </button>
+                <button 
+                  onClick={() => sendMessage({ type: 'GAMEPAD_INPUT', payload: 'Y' })}
+                  className="hardware-surface w-14 h-14 rounded-full flex items-center justify-center text-yellow-400 font-bold active:bg-yellow-600 active:text-white"
+                >
+                  Y
+                </button>
+              </div>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => sendMessage({ type: 'GAMEPAD_INPUT', payload: 'A' })}
+                  className="hardware-surface w-14 h-14 rounded-full flex items-center justify-center text-emerald-400 font-bold active:bg-emerald-600 active:text-white"
+                >
+                  A
+                </button>
+                <button 
+                  onClick={() => sendMessage({ type: 'GAMEPAD_INPUT', payload: 'B' })}
+                  className="hardware-surface w-14 h-14 rounded-full flex items-center justify-center text-red-400 font-bold active:bg-red-600 active:text-white"
+                >
+                  B
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      case 'POWER':
+        const powerActions = [
+          { icon: Power, label: 'Shutdown', cmd: 'shutdown', color: 'text-red-500' },
+          { icon: Play, label: 'Restart', cmd: 'restart', color: 'text-blue-500' },
+          { icon: Pause, label: 'Sleep', cmd: 'sleep', color: 'text-amber-500' },
+          { icon: Monitor, label: 'Lock', cmd: 'lock', color: 'text-purple-500' }
+        ];
+        return (
+          <div className="flex-1 flex flex-col gap-6 items-center justify-center">
+            <div className="grid grid-cols-2 gap-6 w-full max-w-xs">
+              {powerActions.map((action) => (
+                <button
+                  key={action.label}
+                  onClick={() => sendMessage({ type: 'POWER_CMD', payload: action.cmd })}
+                  className="hardware-surface p-8 rounded-3xl flex flex-col items-center gap-4 active:scale-95 transition-transform"
+                >
+                  <action.icon className={`w-10 h-10 ${action.color}`} />
+                  <span className="text-xs font-bold uppercase tracking-widest">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   if (mode === 'SELECT') {
@@ -346,82 +499,66 @@ export default function App() {
               </div>
             </div>
 
-            {/* Touchpad Area */}
-            <div className="flex-1 flex flex-col gap-2">
-              <div className="flex items-center justify-between px-2">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Precision Touchpad</span>
-                <Maximize className="w-3 h-3 text-zinc-500" />
-              </div>
-              <div 
-                ref={touchpadRef}
-                onMouseMove={handleTouchpadMove}
-                onTouchMove={handleTouchpadMove}
-                className="flex-1 hardware-surface rounded-3xl relative overflow-hidden cursor-none active:border-blue-500/50 transition-colors"
-                style={{ 
-                  backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0)',
-                  backgroundSize: '24px 24px'
-                }}
-              >
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
-                  <MousePointer2 className="w-12 h-12" />
-                </div>
-              </div>
-            </div>
+            {/* Dynamic View Area */}
+            {renderRemoteView()}
 
-            {/* Media Controls */}
-            <div className="hardware-surface p-6 rounded-3xl flex flex-col gap-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Music className="w-5 h-5 text-blue-400" />
+            {/* Media Controls (Minimized when not in Touchpad) */}
+            {remoteView === 'TOUCHPAD' && (
+              <div className="hardware-surface p-6 rounded-3xl flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                      <Music className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-white">Now Playing</div>
+                      <div className="text-[10px] text-zinc-500 font-mono">System Audio</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-xs font-medium text-white">Now Playing</div>
-                    <div className="text-[10px] text-zinc-500 font-mono">System Audio</div>
+                  <div className="flex items-center gap-2">
+                    <VolumeX className="w-4 h-4 text-zinc-500" />
+                    <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden">
+                      <div className="w-2/3 h-full bg-blue-500" />
+                    </div>
+                    <Volume2 className="w-4 h-4 text-blue-400" />
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <VolumeX className="w-4 h-4 text-zinc-500" />
-                  <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div className="w-2/3 h-full bg-blue-500" />
-                  </div>
-                  <Volume2 className="w-4 h-4 text-blue-400" />
+
+                <div className="flex items-center justify-center gap-8">
+                  <button 
+                    onClick={() => sendMessage({ type: 'MEDIA_CMD', payload: 'prev' })}
+                    className="p-2 text-zinc-400 hover:text-white transition-colors"
+                  >
+                    <SkipBack className="w-6 h-6" />
+                  </button>
+                  <button 
+                    onClick={() => sendMessage({ type: 'MEDIA_CMD', payload: 'play_pause' })}
+                    className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/20"
+                  >
+                    <Play className="w-6 h-6 fill-current" />
+                  </button>
+                  <button 
+                    onClick={() => sendMessage({ type: 'MEDIA_CMD', payload: 'next' })}
+                    className="p-2 text-zinc-400 hover:text-white transition-colors"
+                  >
+                    <SkipForward className="w-6 h-6" />
+                  </button>
                 </div>
               </div>
+            )}
 
-              <div className="flex items-center justify-center gap-8">
-                <button 
-                  onClick={() => sendMessage({ type: 'MEDIA_CMD', payload: 'prev' })}
-                  className="p-2 text-zinc-400 hover:text-white transition-colors"
-                >
-                  <SkipBack className="w-6 h-6" />
-                </button>
-                <button 
-                  onClick={() => sendMessage({ type: 'MEDIA_CMD', payload: 'play_pause' })}
-                  className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/20"
-                >
-                  <Play className="w-6 h-6 fill-current" />
-                </button>
-                <button 
-                  onClick={() => sendMessage({ type: 'MEDIA_CMD', payload: 'next' })}
-                  className="p-2 text-zinc-400 hover:text-white transition-colors"
-                >
-                  <SkipForward className="w-6 h-6" />
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
+            {/* Quick Actions Navigation */}
             <div className="grid grid-cols-4 gap-4">
               {[
-                { icon: Keyboard, label: 'Keys', color: 'text-amber-400' },
-                { icon: Gamepad2, label: 'Game', color: 'text-emerald-400' },
-                { icon: Monitor, label: 'Screen', color: 'text-purple-400' },
-                { icon: Power, label: 'Power', color: 'text-red-400' }
+                { icon: MousePointer2, label: 'Touch', view: 'TOUCHPAD', color: 'text-blue-400' },
+                { icon: Keyboard, label: 'Keys', view: 'KEYBOARD', color: 'text-amber-400' },
+                { icon: Gamepad2, label: 'Game', view: 'GAMEPAD', color: 'text-emerald-400' },
+                { icon: Power, label: 'Power', view: 'POWER', color: 'text-red-400' }
               ].map((item, i) => (
                 <button 
                   key={i}
-                  className="hardware-surface aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-white/5 transition-colors"
+                  onClick={() => setRemoteView(item.view as RemoteView)}
+                  className={`hardware-surface aspect-square rounded-2xl flex flex-col items-center justify-center gap-2 transition-all ${remoteView === item.view ? 'bg-white/10 border-white/20 scale-105' : 'hover:bg-white/5'}`}
                 >
                   <item.icon className={`w-5 h-5 ${item.color}`} />
                   <span className="text-[10px] font-medium text-zinc-500">{item.label}</span>
