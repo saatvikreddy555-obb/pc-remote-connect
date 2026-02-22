@@ -23,7 +23,12 @@ import {
   ChevronRight,
   Cpu,
   Zap,
-  HardDrive
+  HardDrive,
+  Settings,
+  Globe,
+  Link2,
+  Info,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -40,14 +45,27 @@ export default function App() {
   const [cursorPos, setCursorPos] = useState({ x: 50, y: 50 });
   const [systemStats, setSystemStats] = useState({ cpu: 0, ram: 0, battery: 100, isCharging: false });
   const [lastAction, setLastAction] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [customIp, setCustomIp] = useState('');
+  const [connectionUrl, setConnectionUrl] = useState('');
   const socketRef = useRef<WebSocket | null>(null);
   const touchpadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (mode === 'SELECT') return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socket = new WebSocket(`${protocol}//${window.location.host}`);
+    let url = '';
+    if (customIp) {
+      // Manual IP connection (Local Network)
+      url = `ws://${customIp}`;
+    } else {
+      // Automatic Cloud connection
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      url = `${protocol}//${window.location.host}`;
+    }
+    
+    setConnectionUrl(url);
+    const socket = new WebSocket(url);
     socketRef.current = socket;
 
     socket.onopen = () => setConnected(true);
@@ -58,7 +76,7 @@ export default function App() {
     };
 
     return () => socket.close();
-  }, [mode]);
+  }, [mode, customIp]);
 
   const handleIncomingMessage = (msg: Message) => {
     if (msg.type === 'CURSOR_POS') {
@@ -101,7 +119,15 @@ export default function App() {
 
   if (mode === 'SELECT') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#0a0a0b]">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0a0a0b]">
+        <div className="mb-12 text-center">
+          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-600/20">
+            <MousePointer2 className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">RemoteLink</h1>
+          <p className="text-zinc-500 text-sm">Professional PC Remote Control</p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -113,7 +139,7 @@ export default function App() {
               <Monitor className="w-12 h-12 text-blue-500" />
             </div>
             <div className="text-center">
-              <h2 className="text-2xl font-bold mb-2">PC Mode</h2>
+              <h2 className="text-2xl font-bold mb-2 text-white">PC Mode</h2>
               <p className="text-zinc-500 text-sm">Receive commands and display cursor</p>
             </div>
           </motion.button>
@@ -128,11 +154,81 @@ export default function App() {
               <Smartphone className="w-12 h-12 text-emerald-500" />
             </div>
             <div className="text-center">
-              <h2 className="text-2xl font-bold mb-2">Remote Mode</h2>
+              <h2 className="text-2xl font-bold mb-2 text-white">Remote Mode</h2>
               <p className="text-zinc-500 text-sm">Control your PC from this device</p>
             </div>
           </motion.button>
         </div>
+
+        <button 
+          onClick={() => setShowSettings(true)}
+          className="mt-12 flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-sm font-medium"
+        >
+          <Settings className="w-4 h-4" />
+          Connection Settings
+        </button>
+
+        {/* Settings Modal */}
+        <AnimatePresence>
+          {showSettings && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="hardware-surface w-full max-w-md rounded-3xl p-8 relative"
+              >
+                <button 
+                  onClick={() => setShowSettings(false)}
+                  className="absolute top-6 right-6 text-zinc-500 hover:text-white"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                  <Link2 className="w-6 h-6 text-blue-500" />
+                  Connection Settings
+                </h3>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-xs font-mono text-zinc-500 uppercase tracking-widest mb-2">Manual IP Connection</label>
+                    <div className="relative">
+                      <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                      <input 
+                        type="text" 
+                        placeholder="e.g. 192.168.1.10:3000"
+                        value={customIp}
+                        onChange={(e) => setCustomIp(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-zinc-700 focus:outline-none focus:border-blue-500/50 transition-colors"
+                      />
+                    </div>
+                    <p className="text-[10px] text-zinc-600 mt-2 flex items-start gap-2">
+                      <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                      Use this to connect to a server running on your local network (offline mode). Leave empty for cloud mode.
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
+                    <h4 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2">How to use offline:</h4>
+                    <ol className="text-[10px] text-zinc-400 space-y-2 list-decimal ml-4">
+                      <li>Host this app's server on your PC locally.</li>
+                      <li>Ensure your phone and PC are on the same Wi-Fi.</li>
+                      <li>Enter your PC's local IP address above.</li>
+                    </ol>
+                  </div>
+
+                  <button 
+                    onClick={() => setShowSettings(false)}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-blue-600/20"
+                  >
+                    Save & Close
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -179,6 +275,9 @@ export default function App() {
               <div className="absolute inset-0 flex flex-col items-center justify-center opacity-20 select-none">
                 <Monitor className="w-32 h-32 mb-4" />
                 <p className="font-mono text-sm tracking-widest">AWAITING INPUT...</p>
+                <div className="mt-4 px-4 py-2 bg-white/5 rounded-lg border border-white/5 font-mono text-[10px] text-zinc-500">
+                  WS: {connectionUrl}
+                </div>
               </div>
 
               {/* Action Toast */}
@@ -336,8 +435,8 @@ export default function App() {
       {/* Footer Status */}
       <footer className="h-10 border-t border-white/5 bg-[#0d0e11] flex items-center justify-between px-6">
         <div className="flex items-center gap-4">
+          <span className="text-[10px] font-mono text-zinc-600 uppercase">Mode: {customIp ? 'Local' : 'Cloud'}</span>
           <span className="text-[10px] font-mono text-zinc-600">LATENCY: 12MS</span>
-          <span className="text-[10px] font-mono text-zinc-600">FPS: 60</span>
         </div>
         <div className="text-[10px] font-mono text-blue-500/50">v1.0.4-STABLE</div>
       </footer>
